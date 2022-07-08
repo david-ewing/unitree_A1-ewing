@@ -6,16 +6,16 @@ from spot_kinematics.base.LieAlgebra import RpToTrans, TransToRp, TransInv, RPY,
 from collections import OrderedDict
 
 
-class SpotModel: # values marked by #* are updated A1 measurments 
+class A1Model: # values marked by #* are updated A1 measurments 
     def __init__(self,
                  shoulder_length=0.0838,    #* hip link length
                  elbow_length=0.2,          #* thigh link length
                  wrist_length=0.2,          #* calf link length 
-                 hip_x=0.37,                #* x distance between hips 
-                 hip_y=0.096,               #* y distance between hips
-                 foot_x=0.37,               #*
-                 foot_y=0.264,              #*
-                 height=0.25,                #* roughly the z distance of base to feet
+                 hip_x=0.37,        #* x distance between hips 
+                 hip_y=0.096,       #* y distance between hips
+                 foot_x=0.37,       #*
+                 foot_y=0.096,      #*
+                 height=0.4,        #* roughly the z distance of base to feet
                  com_offset=0.012731,        #* trunk COM in x direction
                  shoulder_lim=[-0.8028, 0.8028],    #*
                  elbow_lim=[-1.047, 4.1887],        #*

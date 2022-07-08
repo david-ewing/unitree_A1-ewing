@@ -19,11 +19,11 @@ import numpy as np
 from . import motor
 from spot_kinematics.util import pybullet_data
 # print(pybullet_data.getDataPath())
-from spot_kinematics.SpotKinematics import SpotModel
-import spot_kinematics.base.LieAlgebra as LA
+from a1_bezier.A1Kinematics import A1Model
+import a1_bezier.LieAlgebra as LA
 
-INIT_POSITION = [0, 0, 0.38]
-INIT_RACK_POSITION = [0, 0, 1]
+INIT_POSITION = [0, 0, 0.25]
+# INIT_RACK_POSITION = [0, 0, 1]
 # NOTE: URDF IS FACING THE WRONG WAY
 # TEMP FIX
 INIT_ORIENTATION = [0, 0, 0, 1]
@@ -34,54 +34,56 @@ INIT_LEG_POS = -0.658319
 # math.pi / 3
 INIT_FOOT_POS = 1.0472
 
-# OLD_LEG_POSITION = ["front_left", "front_right", "rear_left", "rear_right"]
-# OLD_MOTOR_NAMES = [
-#     "motor_front_left_shoulder", "motor_front_left_leg",
-#     "foot_motor_front_left", "motor_front_right_shoulder",
-#     "motor_front_right_leg", "foot_motor_front_right",
-#     "motor_rear_left_shoulder", "motor_rear_left_leg", "foot_motor_rear_left",
-#     "motor_rear_right_shoulder", "motor_rear_right_leg",
-#     "foot_motor_rear_right"
-# ]
+OLD_LEG_POSITION = ["front_left", "front_right", "rear_left", "rear_right"]
+OLD_MOTOR_NAMES = [
+    "motor_front_left_shoulder", "motor_front_left_leg",
+    "foot_motor_front_left", "motor_front_right_shoulder",
+    "motor_front_right_leg", "foot_motor_front_right",
+    "motor_rear_left_shoulder", "motor_rear_left_leg", "foot_motor_rear_left",
+    "motor_rear_right_shoulder", "motor_rear_right_leg",
+    "foot_motor_rear_right"
+]
 
-# OLD_MOTOR_LIMITS_BY_NAME = {}
-# for name in OLD_MOTOR_NAMES:
-#     if "shoulder" in name:
-#         OLD_MOTOR_LIMITS_BY_NAME[name] = [-1.04, 1.04]
-#     elif "leg" in name:
-#         OLD_MOTOR_LIMITS_BY_NAME[name] = [-2.59, 1.571]
-#     elif "foot" in name:
-#         OLD_MOTOR_LIMITS_BY_NAME[name] = [-1.571, 2.9]
+OLD_MOTOR_LIMITS_BY_NAME = {}
+for name in OLD_MOTOR_NAMES:
+    if "shoulder" in name:
+        OLD_MOTOR_LIMITS_BY_NAME[name] = [-0.8028, 0.8028]
+    elif "leg" in name:
+        OLD_MOTOR_LIMITS_BY_NAME[name] = [-1.047, 4.1887]
+    elif "foot" in name:
+        OLD_MOTOR_LIMITS_BY_NAME[name] = [-2.6965, -0.91629]
 
-# OLD_FOOT_NAMES = [
-#     "front_left_toe", "front_right_toe", "rear_left_toe", "rear_right_toe"
-# ]
+OLD_FOOT_NAMES = [
+    "front_left_toe", "front_right_toe", "rear_left_toe", "rear_right_toe"
+]
 
-LEG_POSITION = ["FR", "FL", "RR", "RL"]
+LEG_POSITION = ["front_left", "front_right", "back_left", "back_right"]
 MOTOR_NAMES = [
-    "FR_hip_joint", "FR_thigh_joint", "FR_calf_joint",
-    "FL_hip_joint", "FL_thigh_joint", "FL_calf_joint",
-    "RR_hip_joint", "RR_thigh_joint", "RR_calf_joint", 
-    "RL_hip_joint", "RL_thigh_joint", "RL_calf_joint"
+    "motor_front_left_hip", "motor_front_left_upper_leg",
+    "motor_front_left_lower_leg", "motor_front_right_hip",
+    "motor_front_right_upper_leg", "motor_front_right_lower_leg",
+    "motor_back_left_hip", "motor_back_left_upper_leg",
+    "motor_back_left_lower_leg", "motor_back_right_hip",
+    "motor_back_right_upper_leg", "motor_back_right_lower_leg"
 ]
 
 MOTOR_LIMITS_BY_NAME = {}
 for name in MOTOR_NAMES:
     if "hip" in name:
-        MOTOR_LIMITS_BY_NAME[name] = [-1.04, 1.04]
-    elif "thigh" in name:
-        MOTOR_LIMITS_BY_NAME[name] = [-1.571, 2.59]
-    elif "calf" in name:
-        MOTOR_LIMITS_BY_NAME[name] = [-2.9, 1.671]
+        MOTOR_LIMITS_BY_NAME[name] = [-0.8028, 0.8028]
+    elif "upper_leg" in name:
+        MOTOR_LIMITS_BY_NAME[name] = [-1.047, 4.1887]
+    elif "lower_leg" in name:
+        MOTOR_LIMITS_BY_NAME[name] = [-2.6965, -0.91629]
 
 FOOT_NAMES = [
-    "FR_foot_fixed", "FL_foot_fixed", "RL_foot_fixed",
-    "RR_foot_fixed"
+    "front_left_leg_foot", "front_right_leg_foot", "back_left_leg_foot",
+    "back_right_leg_foot"
 ]
 
 _CHASSIS_NAME_PATTERN = re.compile(r"chassis\D*")
-_MOTOR_NAME_PATTERN = re.compile(r"\D*joint")
-_FOOT_NAME_PATTERN = re.compile(r"\D*foot\D*")
+_MOTOR_NAME_PATTERN = re.compile(r"motor\D*")
+_FOOT_NAME_PATTERN = re.compile(r"foot\D*")
 SENSOR_NOISE_STDDEV = (0.0, 0.0, 0.0, 0.0, 0.0)
 TWO_PI = 2 * math.pi
 
@@ -104,23 +106,23 @@ def MapToMinusPiToPi(angles):
     return mapped_angles
 
 
-class Spot(object):
-    """The spot class that simulates a quadruped robot.
+class A1(object):
+    """The a1 class that simulates a quadruped robot.
 
   """
-    INIT_POSES = {
-        'stand':
-        np.array([
-            # 0.15192765, 0.7552236, -1.5104472, -0.15192765, 0.7552236,
-            # -1.5104472, 0.15192765, 0.7552236, -1.5104472, -0.15192765,
-            # 0.7552236, -1.5104472
-            0, 0.9, -1.8, 0, 0.9, -1.8, 0, 0.9, -1.8, 0, 0.9, -1.8
-        ]),
-        'liedown':
-        np.array([-0.4, -1.5, 6, 0.4, -1.5, 6, -0.4, -1.5, 6, 0.4, -1.5, 6]),
-        'zero':
-        np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
-    }
+    # will have to be calibrated for the A1
+    # INIT_POSES = {
+    #     'stand':
+    #     np.array([
+    #         0.15192765, 0.7552236, -1.5104472, -0.15192765, 0.7552236,
+    #         -1.5104472, 0.15192765, 0.7552236, -1.5104472, -0.15192765,
+    #         0.7552236, -1.5104472
+    #     ]),
+    #     'liedown':
+    #     np.array([-0.4, -1.5, 6, 0.4, -1.5, 6, -0.4, -1.5, 6, 0.4, -1.5, 6]),
+    #     'zero':
+    #     np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
+    # }
 
     def __init__(self,
                  pybullet_client,
@@ -145,7 +147,7 @@ class Spot(object):
                  pose_id='stand',
                  np_random=np.random,
                  contacts=True):
-        """Constructs a spot and reset it to the initial states.
+        """Constructs a a1 and reset it to the initial states.
 
     Args:
       pybullet_client: The instance of BulletClient to manage different
@@ -174,14 +176,14 @@ class Spot(object):
         False, pose control will be used.
       motor_overheat_protection: Whether to shutdown the motor that has exerted
         large torque (OVERHEAT_SHUTDOWN_TORQUE) for an extended amount of time
-        (OVERHEAT_SHUTDOWN_TIME). See ApplyAction() in spot.py for more
+        (OVERHEAT_SHUTDOWN_TIME). See ApplyAction() in a1.py for more
         details.
-      on_rack: Whether to place the spot on rack. This is only used to debug
-        the walking gait. In this mode, the spot's base is hanged midair so
+      on_rack: Whether to place the a1 on rack. This is only used to debug
+        the walking gait. In this mode, the a1's base is hanged midair so
         that its walking gait is clearer to visualize.
     """
-        # SPOT MODEL
-        self.spot = SpotModel()
+        # A1 MODEL
+        self.a1 = A1Model()
         # Whether to include contact sensing
         self.contacts = contacts
         # Control Inputs
@@ -197,6 +199,7 @@ class Spot(object):
         self.prev_ang_twist = np.array([0, 0, 0])
         self.prev_lin_twist = np.array([0, 0, 0])
         self.prev_lin_acc = np.array([0, 0, 0])
+        
         self.num_motors = 12
         self.num_legs = int(self.num_motors / 3)
         self._pybullet_client = pybullet_client
@@ -352,12 +355,12 @@ class Spot(object):
               reload_urdf=True,
               default_motor_angles=None,
               reset_time=3.0):
-        """Reset the spot to its initial states.
+        """Reset the a1 to its initial states.
 
     Args:
       reload_urdf: Whether to reload the urdf file. If not, Reset() just place
-        the spot back to its starting position.
-      default_motor_angles: The default motor angles. If it is None, spot
+        the a1 back to its starting position.
+      default_motor_angles: The default motor angles. If it is None, a1
         will hold a default pose for 100 steps. In
         torque control mode, the phase of holding the default pose is skipped.
       reset_time: The duration (in seconds) to hold the default motor angles. If
@@ -373,14 +376,14 @@ class Spot(object):
             if self._self_collision_enabled:
                 self.quadruped = self._pybullet_client.loadURDF(
                     #pybullet_data.getDataPath() + "/assets/urdf/a1.urdf",
-                    "unitree_A1-ewing/spot_kinematics/util/pybullet_data/assets/urdf/a1.urdf",
+                    "a1_kinematics/util/pybullet_data/assets/urdf/a1.urdf",
                     init_position,
                     useFixedBase=self._on_rack,
                     flags=self._pybullet_client.URDF_USE_SELF_COLLISION_EXCLUDE_PARENT)
             else:
                 self.quadruped = self._pybullet_client.loadURDF(
                     # pybullet_data.getDataPath() + "/assets/urdf/a1.urdf",
-                    "unitree_A1-ewing/spot_kinematics/util/pybullet_data/assets/urdf/a1.urdf",
+                    "a1_kinematics/util/pybullet_data/assets/urdf/a1.urdf",
                     init_position,
                     INIT_ORIENTATION,
                     useFixedBase=self._on_rack)
@@ -462,7 +465,7 @@ class Spot(object):
                                        desired_angle)
 
     def ResetPose(self, add_constraint):
-        """Reset the pose of the spot.
+        """Reset the pose of the a1.
 
     Args:
       add_constraint: Whether to add a constraint at the joints of two feet.
@@ -483,18 +486,18 @@ class Spot(object):
         leg_position = LEG_POSITION[leg_id]
         self._pybullet_client.resetJointState(
             self.quadruped,
-            self._joint_name_to_id[leg_position + "_hip_joint"],
+            self._joint_name_to_id["motor_" + leg_position + "_hip"],
             self.INIT_POSES[self._pose_id][3 * leg_id],
             targetVelocity=0)
 
         self._pybullet_client.resetJointState(
             self.quadruped,
-            self._joint_name_to_id[leg_position + "_thigh_joint"],
+            self._joint_name_to_id["motor_" + leg_position + "_upper_leg"],
             self.INIT_POSES[self._pose_id][3 * leg_id + 1],
             targetVelocity=0)
         self._pybullet_client.resetJointState(
             self.quadruped,
-            self._joint_name_to_id[leg_position + "_calf_joint"],
+            self._joint_name_to_id["motor_" + leg_position + "_lower_leg"],
             self.INIT_POSES[self._pose_id][3 * leg_id + 2],
             targetVelocity=0)
 
@@ -502,58 +505,61 @@ class Spot(object):
             # Disable the default motor in pybullet.
             self._pybullet_client.setJointMotorControl2(
                 bodyIndex=self.quadruped,
-                jointIndex=(self._joint_name_to_id[leg_position + "_hip_joint"]),
+                jointIndex=(self._joint_name_to_id["motor_" + leg_position +
+                                                   "_hip"]),
                 controlMode=self._pybullet_client.VELOCITY_CONTROL,
                 targetVelocity=0,
                 force=knee_friction_force)
             self._pybullet_client.setJointMotorControl2(
                 bodyIndex=self.quadruped,
-                jointIndex=(self._joint_name_to_id[leg_position + "_thigh_joint"]),
+                jointIndex=(self._joint_name_to_id["motor_" + leg_position +
+                                                   "_upper_leg"]),
                 controlMode=self._pybullet_client.VELOCITY_CONTROL,
                 targetVelocity=0,
                 force=knee_friction_force)
             self._pybullet_client.setJointMotorControl2(
                 bodyIndex=self.quadruped,
-                jointIndex=(self._joint_name_to_id[leg_position + "_calf_joint"]),
+                jointIndex=(self._joint_name_to_id["motor_" + leg_position +
+                                                   "_lower_leg"]),
                 controlMode=self._pybullet_client.VELOCITY_CONTROL,
                 targetVelocity=0,
                 force=knee_friction_force)
 
     def GetBasePosition(self):
-        """Get the position of spot's base.
+        """Get the position of a1's base.
 
         Returns:
-          The position of spot's base.
+          The position of a1's base.
         """
         position, _ = (self._pybullet_client.getBasePositionAndOrientation(
             self.quadruped))
         return position
 
     def GetBaseOrientation(self):
-        """Get the orientation of spot's base, represented as quaternion.
+        """Get the orientation of a1's base, represented as quaternion.
 
         Returns:
-          The orientation of spot's base.
+          The orientation of a1's base.
         """
         _, orientation = (self._pybullet_client.getBasePositionAndOrientation(
             self.quadruped))
         return orientation
 
     def GetBaseRollPitchYaw(self):
-        """Get the rate of orientation change of the spot's base in euler angle.
+        """Get the rate of orientation change of the a1's base in euler angle.
 
         Returns:
-          rate of (roll, pitch, yaw) change of the spot's base.
+          rate of (roll, pitch, yaw) change of the a1's base.
         """
         vel = self._pybullet_client.getBaseVelocity(self.quadruped)
         return np.asarray([vel[1][0], vel[1][1], vel[1][2]])
 
     def GetBaseRollPitchYawRate(self):
-        """Get the rate of orientation change of the spot's base in euler angle.
+        """Get the rate of orientation change of the a1's base in euler angle.
 
         This function mimicks the noisy sensor reading and adds latency.
         Returns:
-          rate of (roll, pitch, yaw) change of the spot's base polluted by noise
+          rate of (roll, pitch, yaw) change of the a1's base polluted by noise
           and latency.
         """
         return self._AddSensorNoise(
@@ -886,7 +892,7 @@ class Spot(object):
         return self._leg_inertia_urdf
 
     def SetBaseMasses(self, base_mass):
-        """Set the mass of spot's base.
+        """Set the mass of a1's base.
 
         Args:
           base_mass: A list of masses of each body link in CHASIS_LINK_IDS. The
@@ -929,7 +935,7 @@ class Spot(object):
                                                  mass=motor_mass)
 
     def SetBaseInertias(self, base_inertias):
-        """Set the inertias of spot's base.
+        """Set the inertias of a1's base.
         Args:
           base_inertias: A list of inertias of each body link in CHASIS_LINK_IDS.
             The length of this list should be the same as the length of
