@@ -8,15 +8,15 @@ import sys
 
 sys.path.append('../../')
 
-from spot_kinematics.spot_bezier_env import spotBezierEnv
-from spot_kinematics.base.gui import GUI
-from spot_kinematics.SpotKinematics import SpotModel
-from spot_kinematics.base.LieAlgebra import RPY
-from spot_kinematics.Bezier import BezierGait
-from spot_kinematics.spot_env_randomizer import SpotEnvRandomizer
+from a1_kinematics.a1_bezier_env import a1BezierEnv
+from a1_kinematics.base.gui import GUI
+from a1_kinematics.A1Kinematics import A1Model
+from a1_kinematics.base.LieAlgebra import RPY
+from a1_kinematics.Bezier import BezierGait
+from a1_kinematics.a1_env_randomizer import A1EnvRandomizer
 
 # TESTING
-from spot_kinematics.base.SpotOL import BezierStepper
+from a1_kinematics.base.A1OL import BezierStepper
 
 import time
 import os
@@ -24,7 +24,7 @@ import os
 import argparse
 
 # ARGUMENTS
-descr = "Spot Mini Mini Environment Tester (No Joystick)."
+descr = "A1 Mini Mini Environment Tester (No Joystick)."
 parser = argparse.ArgumentParser(description=descr)
 parser.add_argument("-hf",
                     "--HeightField",
@@ -32,19 +32,19 @@ parser.add_argument("-hf",
                     action='store_true')
 parser.add_argument("-r",
                     "--DebugRack",
-                    help="Put Spot on an Elevated Rack",
+                    help="Put A1 on an Elevated Rack",
                     action='store_true')
 parser.add_argument("-p",
                     "--DebugPath",
-                    help="Draw Spot's Foot Path",
+                    help="Draw A1's Foot Path",
                     action='store_true')
 parser.add_argument("-ay",
                     "--AutoYaw",
-                    help="Automatically Adjust Spot's Yaw",
+                    help="Automatically Adjust A1's Yaw",
                     action='store_true')
 parser.add_argument("-ar",
                     "--AutoReset",
-                    help="Automatically Reset Environment When Spot Falls",
+                    help="Automatically Reset Environment When A1 Falls",
                     action='store_true')
 parser.add_argument("-dr",
                     "--DontRandomize",
@@ -89,9 +89,9 @@ def main():
     if ARGS.DontRandomize:
         env_randomizer = None
     else:
-        env_randomizer = SpotEnvRandomizer()
+        env_randomizer = A1EnvRandomizer()
 
-    env = spotBezierEnv(render=True,
+    env = a1BezierEnv(render=True,
                         on_rack=on_rack,
                         height_field=height_field,
                         draw_foot_path=draw_foot_path,
@@ -109,10 +109,10 @@ def main():
 
     state = env.reset()
 
-    g_u_i = GUI(env.spot.quadruped)
+    g_u_i = GUI(env.a1.quadruped)
 
-    spot = SpotModel()
-    T_bf0 = spot.WorldToFoot
+    a1 = A1Model()
+    T_bf0 = a1.WorldToFoot
     T_bf = copy.deepcopy(T_bf0)
 
     bzg = BezierGait(dt=env._time_step)
@@ -162,17 +162,17 @@ def main():
 
         contacts = state[-4:]
 
-        FL_phases.append(env.spot.LegPhases[0])
-        FR_phases.append(env.spot.LegPhases[1])
-        BL_phases.append(env.spot.LegPhases[2])
-        BR_phases.append(env.spot.LegPhases[3])
+        FL_phases.append(env.a1.LegPhases[0])
+        FR_phases.append(env.a1.LegPhases[1])
+        BL_phases.append(env.a1.LegPhases[2])
+        BR_phases.append(env.a1.LegPhases[3])
 
         # Get Desired Foot Poses
         T_bf = bzg.GenerateTrajectory(StepLength, LateralFraction, YawRate,
                                       StepVelocity, T_bf0, T_bf,
                                       ClearanceHeight, PenetrationDepth,
                                       contacts)
-        joint_angles = spot.IK(orn, pos, T_bf)
+        joint_angles = a1.IK(orn, pos, T_bf)
 
         FL_Elbow.append(np.degrees(joint_angles[0][-1]))
 
@@ -182,7 +182,7 @@ def main():
 
         env.pass_joint_angles(joint_angles.reshape(-1))
         # Get External Observations
-        env.spot.GetExternalObservations(bzg, bz_step)
+        env.a1.GetExternalObservations(bzg, bz_step)
         # Step
         state, reward, done, _ = env.step(action)
         # print("IMU Roll: {}".format(state[0]))

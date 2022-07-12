@@ -19,13 +19,13 @@ import pybullet_data
 from gym import spaces
 from gym.utils import seeding
 from pkg_resources import parse_version
-from . import spot
+from . import a1
 import pybullet_utils.bullet_client as bullet_client
 from gym.envs.registration import register
-from spot_kinematics.base.heightfield import HeightField
-from spot_kinematics.base.SpotOL import BezierStepper
-import spot_kinematics.base.LieAlgebra as LA
-from spot_kinematics.spot_env_randomizer import SpotEnvRandomizer
+from a1_kinematics.base.heightfield import HeightField
+from a1_kinematics.base.A1OL import BezierStepper
+import a1_kinematics.base.LieAlgebra as LA
+from a1_kinematics.a1_env_randomizer import A1EnvRandomizer
 
 NUM_SUBSTEPS = 5
 NUM_MOTORS = 12
@@ -37,16 +37,16 @@ ACTION_EPS = 0.01
 OBSERVATION_EPS = 0.01
 RENDER_HEIGHT = 720
 RENDER_WIDTH = 960
-SENSOR_NOISE_STDDEV = spot.SENSOR_NOISE_STDDEV
+SENSOR_NOISE_STDDEV = a1.SENSOR_NOISE_STDDEV
 DEFAULT_URDF_VERSION = "default"
 NUM_SIMULATION_ITERATION_STEPS = 1000
 
-spot_URDF_VERSION_MAP = {DEFAULT_URDF_VERSION: spot.Spot}
+a1_URDF_VERSION_MAP = {DEFAULT_URDF_VERSION: a1.A1}
 
 # Register as OpenAI Gym Environment
 register(
-    id="SpotMicroEnv-v0",
-    entry_point='spotmicro.spot_gym_env:spotGymEnv',
+    id="A1MicroEnv-v0",
+    entry_point='a1micro.a1_gym_env:a1GymEnv',
     max_episode_steps=1000,
 )
 
@@ -59,13 +59,13 @@ def convert_to_list(obj):
         return [obj]
 
 
-class spotGymEnv(gym.Env):
-    """The gym environment for spot.
+class a1GymEnv(gym.Env):
+    """The gym environment for a1.
 
-  It simulates the locomotion of spot, a quadruped robot. The state space
+  It simulates the locomotion of a1, a quadruped robot. The state space
   include the angles, velocities and torques for all the motors and the action
   space is the desired motor angle for each motor. The reward function is based
-  on how far spot walks in 1000 steps and penalizes the energy
+  on how far a1 walks in 1000 steps and penalizes the energy
   expenditure.
 
   """
@@ -104,7 +104,7 @@ class spotGymEnv(gym.Env):
                  num_steps_to_log=1000,
                  action_repeat=1,
                  control_time_step=None,
-                 env_randomizer=SpotEnvRandomizer(),
+                 env_randomizer=A1EnvRandomizer(),
                  forward_reward_cap=float("inf"),
                  reflection=True,
                  log_path=None,
@@ -116,7 +116,7 @@ class spotGymEnv(gym.Env):
                  height_field_iters=2,
                  AutoStepper=False,
                  contacts=True):
-        """Initialize the spot gym environment.
+        """Initialize the a1 gym environment.
 
     Args:
       urdf_root: The path to the urdf data folder.
@@ -149,13 +149,13 @@ class spotGymEnv(gym.Env):
         False, pose control will be used.
       motor_overheat_protection: Whether to shutdown the motor that has exerted
         large torque (OVERHEAT_SHUTDOWN_TORQUE) for an extended amount of time
-        (OVERHEAT_SHUTDOWN_TIME). See ApplyAction() in spot.py for more
+        (OVERHEAT_SHUTDOWN_TIME). See ApplyAction() in a1.py for more
         details.
       hard_reset: Whether to wipe the simulation and load everything when reset
-        is called. If set to false, reset just place spot back to start
+        is called. If set to false, reset just place a1 back to start
         position and set its pose to initial configuration.
-      on_rack: Whether to place spot on rack. This is only used to debug
-        the walking gait. In this mode, spot's base is hanged midair so
+      on_rack: Whether to place a1 on rack. This is only used to debug
+        the walking gait. In this mode, a1's base is hanged midair so
         that its walking gait is clearer to visualize.
       render: Whether to render the simulation.
       num_steps_to_log: The max number of control steps in one episode that will
@@ -165,12 +165,12 @@ class spotGymEnv(gym.Env):
       action_repeat: The number of simulation steps before actions are applied.
       control_time_step: The time step between two successive control signals.
       env_randomizer: An instance (or a list) of EnvRandomizer(s). An
-        EnvRandomizer may randomize the physical property of spot, change
+        EnvRandomizer may randomize the physical property of a1, change
           the terrrain during reset(), or add perturbation forces during step().
       forward_reward_cap: The maximum value that forward reward is capped at.
         Disabled (Inf) by default.
       log_path: The path to write out logs. For the details of logging, refer to
-        spot_logging.proto.
+        a1_logging.proto.
     Raises:
       ValueError: If the urdf_version is not supported.
     """
@@ -273,9 +273,9 @@ class spotGymEnv(gym.Env):
         # Only update after HF has been generated
         self.height_field = False
         self.reset()
-        observation_high = (self.spot.GetObservationUpperBound() +
+        observation_high = (self.a1.GetObservationUpperBound() +
                             OBSERVATION_EPS)
-        observation_low = (self.spot.GetObservationLowerBound() -
+        observation_low = (self.a1.GetObservationLowerBound() -
                            OBSERVATION_EPS)
         action_dim = NUM_MOTORS
         action_high = np.array([self._action_bound] * action_dim)
@@ -327,11 +327,11 @@ class spotGymEnv(gym.Env):
             self._pybullet_client.setGravity(0, 0, -9.81)
             acc_motor = self._accurate_motor_model_enabled
             motor_protect = self._motor_overheat_protection
-            if self._urdf_version not in spot_URDF_VERSION_MAP:
+            if self._urdf_version not in a1_URDF_VERSION_MAP:
                 raise ValueError("%s is not a supported urdf_version." %
                                  self._urdf_version)
             else:
-                self.spot = (spot_URDF_VERSION_MAP[self._urdf_version](
+                self.a1 = (a1_URDF_VERSION_MAP[self._urdf_version](
                     pybullet_client=self._pybullet_client,
                     action_repeat=self._action_repeat,
                     urdf_root=self._urdf_root,
@@ -352,7 +352,7 @@ class spotGymEnv(gym.Env):
                     on_rack=self._on_rack,
                     np_random=self.np_random,
                     contacts=self.contacts))
-        self.spot.Reset(reload_urdf=False,
+        self.a1.Reset(reload_urdf=False,
                         default_motor_angles=initial_motor_angles,
                         reset_time=reset_duration)
 
@@ -390,7 +390,7 @@ class spotGymEnv(gym.Env):
                         self._action_bound + ACTION_EPS):
                     raise ValueError("{}th action {} out of bounds.".format(
                         i, action_component))
-            action = self.spot.ConvertFromLegModel(action)
+            action = self.a1.ConvertFromLegModel(action)
         return action
 
     def step(self, action):
@@ -409,8 +409,8 @@ class spotGymEnv(gym.Env):
       ValueError: The action dimension is not the same as the number of motors.
       ValueError: The magnitude of actions is out of bounds.
     """
-        self._last_base_position = self.spot.GetBasePosition()
-        self._last_base_orientation = self.spot.GetBaseOrientation()
+        self._last_base_position = self.a1.GetBasePosition()
+        self._last_base_orientation = self.a1.GetBaseOrientation()
         # print("ACTION:")
         # print(action)
         if self._is_render:
@@ -421,7 +421,7 @@ class spotGymEnv(gym.Env):
             time_to_sleep = self.control_time_step - time_spent
             if time_to_sleep > 0:
                 time.sleep(time_to_sleep)
-            base_pos = self.spot.GetBasePosition()
+            base_pos = self.a1.GetBasePosition()
             # Keep the previous orientation of the camera set by the user.
             [yaw, pitch,
              dist] = self._pybullet_client.getDebugVisualizerCamera()[8:11]
@@ -429,7 +429,7 @@ class spotGymEnv(gym.Env):
                 dist, yaw, pitch, base_pos)
 
         action = self._transform_action_to_motor_command(action)
-        self.spot.Step(action)
+        self.a1.Step(action)
         reward = self._reward()
         done = self._termination()
         self._env_step_counter += 1
@@ -442,7 +442,7 @@ class spotGymEnv(gym.Env):
     def render(self, mode="rgb_array", close=False):
         if mode != "rgb_array":
             return np.array([])
-        base_pos = self.spot.GetBasePosition()
+        base_pos = self.a1.GetBasePosition()
         view_matrix = self._pybullet_client.computeViewMatrixFromYawPitchRoll(
             cameraTargetPosition=base_pos,
             distance=self._cam_dist,
@@ -467,14 +467,14 @@ class spotGymEnv(gym.Env):
 
     def DrawFootPath(self):
         # Get Foot Positions
-        FL = self._pybullet_client.getLinkState(self.spot.quadruped,
-                                                self.spot._foot_id_list[0])[0]
-        FR = self._pybullet_client.getLinkState(self.spot.quadruped,
-                                                self.spot._foot_id_list[1])[0]
-        BL = self._pybullet_client.getLinkState(self.spot.quadruped,
-                                                self.spot._foot_id_list[2])[0]
-        BR = self._pybullet_client.getLinkState(self.spot.quadruped,
-                                                self.spot._foot_id_list[3])[0]
+        FL = self._pybullet_client.getLinkState(self.a1.quadruped,
+                                                self.a1._foot_id_list[0])[0]
+        FR = self._pybullet_client.getLinkState(self.a1.quadruped,
+                                                self.a1._foot_id_list[1])[0]
+        BL = self._pybullet_client.getLinkState(self.a1.quadruped,
+                                                self.a1._foot_id_list[2])[0]
+        BR = self._pybullet_client.getLinkState(self.a1.quadruped,
+                                                self.a1._foot_id_list[3])[0]
 
         lifetime = 3.0  # sec
         self._pybullet_client.addUserDebugLine(self.prev_feet_path[0],
@@ -495,8 +495,8 @@ class spotGymEnv(gym.Env):
         self.prev_feet_path[2] = BL
         self.prev_feet_path[3] = BR
 
-    def get_spot_motor_angles(self):
-        """Get the spot's motor angles.
+    def get_a1_motor_angles(self):
+        """Get the a1's motor angles.
 
     Returns:
       A numpy array of motor angles.
@@ -505,8 +505,8 @@ class spotGymEnv(gym.Env):
             self._observation[MOTOR_ANGLE_OBSERVATION_INDEX:
                               MOTOR_ANGLE_OBSERVATION_INDEX + NUM_MOTORS])
 
-    def get_spot_motor_velocities(self):
-        """Get the spot's motor velocities.
+    def get_a1_motor_velocities(self):
+        """Get the a1's motor velocities.
 
     Returns:
       A numpy array of motor velocities.
@@ -515,8 +515,8 @@ class spotGymEnv(gym.Env):
             self._observation[MOTOR_VELOCITY_OBSERVATION_INDEX:
                               MOTOR_VELOCITY_OBSERVATION_INDEX + NUM_MOTORS])
 
-    def get_spot_motor_torques(self):
-        """Get the spot's motor torques.
+    def get_a1_motor_torques(self):
+        """Get the a1's motor torques.
 
     Returns:
       A numpy array of motor torques.
@@ -525,33 +525,33 @@ class spotGymEnv(gym.Env):
             self._observation[MOTOR_TORQUE_OBSERVATION_INDEX:
                               MOTOR_TORQUE_OBSERVATION_INDEX + NUM_MOTORS])
 
-    def get_spot_base_orientation(self):
-        """Get the spot's base orientation, represented by a quaternion.
+    def get_a1_base_orientation(self):
+        """Get the a1's base orientation, represented by a quaternion.
 
     Returns:
-      A numpy array of spot's orientation.
+      A numpy array of a1's orientation.
     """
         return np.array(self._observation[BASE_ORIENTATION_OBSERVATION_INDEX:])
 
     def is_fallen(self):
-        """Decide whether spot has fallen.
+        """Decide whether a1 has fallen.
 
     If the up directions between the base and the world is larger (the dot
     product is smaller than 0.85) or the base is very low on the ground
-    (the height is smaller than 0.13 meter), spot is considered fallen.
+    (the height is smaller than 0.13 meter), a1 is considered fallen.
 
     Returns:
-      Boolean value that indicates whether spot has fallen.
+      Boolean value that indicates whether a1 has fallen.
     """
-        orientation = self.spot.GetBaseOrientation()
+        orientation = self.a1.GetBaseOrientation()
         rot_mat = self._pybullet_client.getMatrixFromQuaternion(orientation)
         local_up = rot_mat[6:]
-        pos = self.spot.GetBasePosition()
+        pos = self.a1.GetBasePosition()
         #  or pos[2] < 0.13
         return (np.dot(np.asarray([0, 0, 1]), np.asarray(local_up)) < 0.55)
 
     def _termination(self):
-        position = self.spot.GetBasePosition()
+        position = self.a1.GetBasePosition()
         distance = math.sqrt(position[0]**2 + position[1]**2)
         return self.is_fallen() or distance > self._distance_limit
 
@@ -564,7 +564,7 @@ class spotGymEnv(gym.Env):
         SPIN: acc(x) = 0, rate(x,y) = 0, rate (z) = rate reference
         Also include drift, energy vanilla rewards
         """
-        current_base_position = self.spot.GetBasePosition()
+        current_base_position = self.a1.GetBasePosition()
 
         # get observation
         obs = self._get_observation()
@@ -572,8 +572,8 @@ class spotGymEnv(gym.Env):
 
         # # POSITIVE FOR FORWARD, NEGATIVE FOR BACKWARD | NOTE: HIDDEN
         # GETTING TWIST IN BODY FRAME
-        pos = self.spot.GetBasePosition()
-        orn = self.spot.GetBaseOrientation()
+        pos = self.a1.GetBasePosition()
+        orn = self.a1.GetBaseOrientation()
         roll, pitch, yaw = self._pybullet_client.getEulerFromQuaternion(
             [orn[0], orn[1], orn[2], orn[3]])
         rpy = LA.RPY(roll, pitch, yaw)
@@ -583,15 +583,15 @@ class spotGymEnv(gym.Env):
         Adj_Tbw = LA.Adjoint(T_bw)
 
         Vw = np.concatenate(
-            (self.spot.prev_ang_twist, self.spot.prev_lin_twist))
+            (self.a1.prev_ang_twist, self.a1.prev_lin_twist))
         Vb = np.dot(Adj_Tbw, Vw)
 
         # New Twist in Body Frame
         # POSITIVE FOR FORWARD, NEGATIVE FOR BACKWARD | NOTE: HIDDEN
         fwd_speed = -Vb[3]  # vx
         lat_speed = -Vb[4]  # vy
-        # fwd_speed = self.spot.prev_lin_twist[0]
-        # lat_speed = self.spot.prev_lin_twist[1]
+        # fwd_speed = self.a1.prev_lin_twist[0]
+        # lat_speed = self.a1.prev_lin_twist[1]
         # print("FORWARD SPEED: {} \t STATE SPEED: {}".format(
         #     fwd_speed, self.desired_velocity))
         # self.desired_velocity = 0.4
@@ -647,8 +647,8 @@ class spotGymEnv(gym.Env):
         #                     self._last_base_position[2])
         self._last_base_position = current_base_position
         energy_reward = -np.abs(
-            np.dot(self.spot.GetMotorTorques(),
-                   self.spot.GetMotorVelocities())) * self._time_step
+            np.dot(self.a1.GetMotorTorques(),
+                   self.a1.GetMotorVelocities())) * self._time_step
         reward = (self._distance_weight * forward_reward +
                   self._rotation_weight * rot_reward +
                   self._energy_weight * energy_reward +
@@ -677,7 +677,7 @@ class spotGymEnv(gym.Env):
     def _get_observation(self):
         """Get observation of this environment, including noise and latency.
 
-    spot class maintains a history of true observations. Based on the
+    a1 class maintains a history of true observations. Based on the
     latency, this function will find the observation at the right time,
     interpolate if necessary. Then Gaussian noise is added to this observation
     based on self.observation_noise_stdev.
@@ -686,7 +686,7 @@ class spotGymEnv(gym.Env):
       The noisy observation with latency.
     """
 
-        self._observation = self.spot.GetObservation()
+        self._observation = self.a1.GetObservation()
         return self._observation
 
     def _get_realistic_observation(self):
@@ -699,7 +699,7 @@ class spotGymEnv(gym.Env):
       are motor velocities, observation[16:24] are motor torques.
       observation[24:28] is the orientation of the base, in quaternion form.
     """
-        self._observation = self.spot.RealisticObservation()
+        self._observation = self.a1.RealisticObservation()
         return self._observation
 
     if parse_version(gym.__version__) < parse_version('0.9.6'):
@@ -732,7 +732,7 @@ class spotGymEnv(gym.Env):
         self._pybullet_client.setPhysicsEngineParameter(
             numSolverIterations=self._num_bullet_solver_iterations)
         self._pybullet_client.setTimeStep(self._time_step)
-        self.spot.SetTimeSteps(action_repeat=self._action_repeat,
+        self.a1.SetTimeSteps(action_repeat=self._action_repeat,
                                simulation_step=self._time_step)
 
     @property

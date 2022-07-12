@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
 import numpy as np
-from spot_kinematics.base.LegKinematics import LegIK
-from spot_kinematics.base.LieAlgebra import RpToTrans, TransToRp, TransInv, RPY, TransformVector
+from a1_kinematics.base.LegKinematics import LegIK
+from a1_kinematics.base.LieAlgebra import RpToTrans, TransToRp, TransInv, RPY, TransformVector
 from collections import OrderedDict
 
 
-class SpotModel: # values marked by #* are updated A1 measurments 
+class A1Model: # values marked by #* are updated A1 measurments 
     def __init__(self,
                  shoulder_length=0.0838,    #* hip link length
                  elbow_length=0.2,          #* thigh link length
@@ -21,7 +21,7 @@ class SpotModel: # values marked by #* are updated A1 measurments
                  elbow_lim=[-1.047, 4.1887],        #*
                  wrist_lim=[-2.6965, -0.91629]):    #*
         """
-        Spot Micro Kinematics
+        A1 Micro Kinematics
         """
         # COM offset in x direction
         self.com_offset = com_offset
@@ -113,18 +113,18 @@ class SpotModel: # values marked by #* are updated A1 measurments
 
     def HipToFoot(self, orn, pos, T_bf):
         """
-        Converts a desired position and orientation wrt Spot's
+        Converts a desired position and orientation wrt A1's
         home position, with a desired body-to-foot Transform
         into a body-to-hip Transform, which is used to extract
         and return the Hip To Foot Vector.
 
-        :param orn: A 3x1 np.array([]) with Spot's Roll, Pitch, Yaw angles
-        :param pos: A 3x1 np.array([]) with Spot's X, Y, Z coordinates
+        :param orn: A 3x1 np.array([]) with A1's Roll, Pitch, Yaw angles
+        :param pos: A 3x1 np.array([]) with A1's X, Y, Z coordinates
         :param T_bf: Dictionary of desired body-to-foot Transforms.
-        :return: Hip To Foot Vector for each of Spot's Legs.
+        :return: Hip To Foot Vector for each of A1's Legs.
         """
 
-        # Following steps in attached document: SpotBodyIK.
+        # Following steps in attached document: A1BodyIK.
         # TODO: LINK DOC
 
         # Only get Rot component
@@ -167,19 +167,19 @@ class SpotModel: # values marked by #* are updated A1 measurments
     def IK(self, orn, pos, T_bf):
         """
         Uses HipToFoot() to convert a desired position
-        and orientation wrt Spot's home position into a
+        and orientation wrt A1's home position into a
         Hip To Foot Vector, which is fed into the LegIK solver.
 
         Finally, the resultant joint angles are returned
         from the LegIK solver for each leg.
 
-        :param orn: A 3x1 np.array([]) with Spot's Roll, Pitch, Yaw angles
-        :param pos: A 3x1 np.array([]) with Spot's X, Y, Z coordinates
+        :param orn: A 3x1 np.array([]) with A1's Roll, Pitch, Yaw angles
+        :param pos: A 3x1 np.array([]) with A1's X, Y, Z coordinates
         :param T_bf: Dictionary of desired body-to-foot Transforms.
-        :return: Joint angles for each of Spot's joints.
+        :return: Joint angles for each of A1's joints.
         """
 
-        # Following steps in attached document: SpotBodyIK.
+        # Following steps in attached document: A1BodyIK.
         # TODO: LINK DOC
 
         # Modify x by com offset

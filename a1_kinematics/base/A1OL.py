@@ -1,4 +1,4 @@
-""" Open Loop Controller for Spot Micro. Takes GUI params or uses default
+""" Open Loop Controller for A1 Micro. Takes GUI params or uses default
 """
 import numpy as np
 from random import shuffle

@@ -1,5 +1,5 @@
 import numpy as np
-from spot_kinematics.base.LieAlgebra import TransToRp
+from a1_kinematics.base.LieAlgebra import TransToRp
 import copy
 
 STANCE = 0

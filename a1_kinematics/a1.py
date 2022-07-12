@@ -17,10 +17,10 @@ import math
 import re
 import numpy as np
 from . import motor
-from spot_kinematics.util import pybullet_data
+from a1_kinematics.util import pybullet_data
 # print(pybullet_data.getDataPath())
-from spot_kinematics.SpotKinematics import SpotModel
-import spot_kinematics.base.LieAlgebra as LA
+from a1_kinematics.A1Kinematics import A1Model
+import a1_kinematics.base.LieAlgebra as LA
 
 INIT_POSITION = [0, 0, 0.38]
 INIT_RACK_POSITION = [0, 0, 1]
@@ -104,8 +104,8 @@ def MapToMinusPiToPi(angles):
     return mapped_angles
 
 
-class Spot(object):
-    """The spot class that simulates a quadruped robot.
+class A1(object):
+    """The a1 class that simulates a quadruped robot.
 
   """
     INIT_POSES = {
@@ -145,7 +145,7 @@ class Spot(object):
                  pose_id='stand',
                  np_random=np.random,
                  contacts=True):
-        """Constructs a spot and reset it to the initial states.
+        """Constructs a a1 and reset it to the initial states.
 
     Args:
       pybullet_client: The instance of BulletClient to manage different
@@ -174,14 +174,14 @@ class Spot(object):
         False, pose control will be used.
       motor_overheat_protection: Whether to shutdown the motor that has exerted
         large torque (OVERHEAT_SHUTDOWN_TORQUE) for an extended amount of time
-        (OVERHEAT_SHUTDOWN_TIME). See ApplyAction() in spot.py for more
+        (OVERHEAT_SHUTDOWN_TIME). See ApplyAction() in a1.py for more
         details.
-      on_rack: Whether to place the spot on rack. This is only used to debug
-        the walking gait. In this mode, the spot's base is hanged midair so
+      on_rack: Whether to place the a1 on rack. This is only used to debug
+        the walking gait. In this mode, the a1's base is hanged midair so
         that its walking gait is clearer to visualize.
     """
         # SPOT MODEL
-        self.spot = SpotModel()
+        self.a1 = A1Model()
         # Whether to include contact sensing
         self.contacts = contacts
         # Control Inputs
@@ -352,12 +352,12 @@ class Spot(object):
               reload_urdf=True,
               default_motor_angles=None,
               reset_time=3.0):
-        """Reset the spot to its initial states.
+        """Reset the a1 to its initial states.
 
     Args:
       reload_urdf: Whether to reload the urdf file. If not, Reset() just place
-        the spot back to its starting position.
-      default_motor_angles: The default motor angles. If it is None, spot
+        the a1 back to its starting position.
+      default_motor_angles: The default motor angles. If it is None, a1
         will hold a default pose for 100 steps. In
         torque control mode, the phase of holding the default pose is skipped.
       reset_time: The duration (in seconds) to hold the default motor angles. If
@@ -373,14 +373,14 @@ class Spot(object):
             if self._self_collision_enabled:
                 self.quadruped = self._pybullet_client.loadURDF(
                     #pybullet_data.getDataPath() + "/assets/urdf/a1.urdf",
-                    "unitree_A1-ewing/spot_kinematics/util/pybullet_data/assets/urdf/a1.urdf",
+                    "unitree_A1_gait/a1_kinematics/util/pybullet_data/assets/urdf/a1.urdf",
                     init_position,
                     useFixedBase=self._on_rack,
                     flags=self._pybullet_client.URDF_USE_SELF_COLLISION_EXCLUDE_PARENT)
             else:
                 self.quadruped = self._pybullet_client.loadURDF(
                     # pybullet_data.getDataPath() + "/assets/urdf/a1.urdf",
-                    "unitree_A1-ewing/spot_kinematics/util/pybullet_data/assets/urdf/a1.urdf",
+                    "unitree_A1_gait/a1_kinematics/util/pybullet_data/assets/urdf/a1.urdf",
                     init_position,
                     INIT_ORIENTATION,
                     useFixedBase=self._on_rack)
@@ -462,7 +462,7 @@ class Spot(object):
                                        desired_angle)
 
     def ResetPose(self, add_constraint):
-        """Reset the pose of the spot.
+        """Reset the pose of the a1.
 
     Args:
       add_constraint: Whether to add a constraint at the joints of two feet.
@@ -520,40 +520,40 @@ class Spot(object):
                 force=knee_friction_force)
 
     def GetBasePosition(self):
-        """Get the position of spot's base.
+        """Get the position of a1's base.
 
         Returns:
-          The position of spot's base.
+          The position of a1's base.
         """
         position, _ = (self._pybullet_client.getBasePositionAndOrientation(
             self.quadruped))
         return position
 
     def GetBaseOrientation(self):
-        """Get the orientation of spot's base, represented as quaternion.
+        """Get the orientation of a1's base, represented as quaternion.
 
         Returns:
-          The orientation of spot's base.
+          The orientation of a1's base.
         """
         _, orientation = (self._pybullet_client.getBasePositionAndOrientation(
             self.quadruped))
         return orientation
 
     def GetBaseRollPitchYaw(self):
-        """Get the rate of orientation change of the spot's base in euler angle.
+        """Get the rate of orientation change of the a1's base in euler angle.
 
         Returns:
-          rate of (roll, pitch, yaw) change of the spot's base.
+          rate of (roll, pitch, yaw) change of the a1's base.
         """
         vel = self._pybullet_client.getBaseVelocity(self.quadruped)
         return np.asarray([vel[1][0], vel[1][1], vel[1][2]])
 
     def GetBaseRollPitchYawRate(self):
-        """Get the rate of orientation change of the spot's base in euler angle.
+        """Get the rate of orientation change of the a1's base in euler angle.
 
         This function mimicks the noisy sensor reading and adds latency.
         Returns:
-          rate of (roll, pitch, yaw) change of the spot's base polluted by noise
+          rate of (roll, pitch, yaw) change of the a1's base polluted by noise
           and latency.
         """
         return self._AddSensorNoise(
@@ -886,7 +886,7 @@ class Spot(object):
         return self._leg_inertia_urdf
 
     def SetBaseMasses(self, base_mass):
-        """Set the mass of spot's base.
+        """Set the mass of a1's base.
 
         Args:
           base_mass: A list of masses of each body link in CHASIS_LINK_IDS. The
@@ -929,7 +929,7 @@ class Spot(object):
                                                  mass=motor_mass)
 
     def SetBaseInertias(self, base_inertias):
-        """Set the inertias of spot's base.
+        """Set the inertias of a1's base.
         Args:
           base_inertias: A list of inertias of each body link in CHASIS_LINK_IDS.
             The length of this list should be the same as the length of

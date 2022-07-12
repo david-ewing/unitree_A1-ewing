@@ -1,4 +1,4 @@
-""" This file implements the gym environment of SpotMicro with Bezier Curve.
+""" This file implements the gym environment of A1Micro with Bezier Curve.
 """
 import math
 import time
@@ -9,31 +9,31 @@ import pybullet_data
 from gym import spaces
 from gym.utils import seeding
 from pkg_resources import parse_version
-from . import spot
+from . import a1
 import pybullet_utils.bullet_client as bullet_client
 from gym.envs.registration import register
-from spot_kinematics.base.SpotOL import BezierStepper
-from spot_kinematics.spot_gym_env import spotGymEnv
-import spot_kinematics.base.LieAlgebra as LA
-from spot_kinematics.spot_env_randomizer import SpotEnvRandomizer
+from a1_kinematics.base.A1OL import BezierStepper
+from a1_kinematics.a1_gym_env import a1GymEnv
+import a1_kinematics.base.LieAlgebra as LA
+from a1_kinematics.a1_env_randomizer import A1EnvRandomizer
 
-SENSOR_NOISE_STDDEV = spot.SENSOR_NOISE_STDDEV
+SENSOR_NOISE_STDDEV = a1.SENSOR_NOISE_STDDEV
 
 # Register as OpenAI Gym Environment
 register(
-    id="SpotMicroEnv-v1",
-    entry_point='spotmicro.GymEnvs.spot_bezier_env:spotBezierEnv',
+    id="A1MicroEnv-v1",
+    entry_point='a1micro.GymEnvs.a1_bezier_env:a1BezierEnv',
     max_episode_steps=1000,
 )
 
 
-class spotBezierEnv(spotGymEnv):
-    """The gym environment for spot.
+class a1BezierEnv(a1GymEnv):
+    """The gym environment for a1.
 
-  It simulates the locomotion of spot, a quadruped robot. The state space
+  It simulates the locomotion of a1, a quadruped robot. The state space
   include the angles, velocities and torques for all the motors and the action
   space is the desired motor angle for each motor. The reward function is based
-  on how far spot walks in 1000 steps and penalizes the energy
+  on how far a1 walks in 1000 steps and penalizes the energy
   expenditure.
 
   """
@@ -72,7 +72,7 @@ class spotBezierEnv(spotGymEnv):
                  num_steps_to_log=1000,
                  action_repeat=1,
                  control_time_step=None,
-                 env_randomizer=SpotEnvRandomizer(),
+                 env_randomizer=A1EnvRandomizer(),
                  forward_reward_cap=float("inf"),
                  reflection=True,
                  log_path=None,
@@ -85,7 +85,7 @@ class spotBezierEnv(spotGymEnv):
                  action_dim=14,
                  contacts=True):
 
-        super(spotBezierEnv, self).__init__(
+        super(a1BezierEnv, self).__init__(
             distance_weight=distance_weight,
             rotation_weight=rotation_weight,
             energy_weight=energy_weight,
@@ -162,8 +162,8 @@ class spotBezierEnv(spotGymEnv):
         # Discard all but joint angles
         action = self.ja
 
-        self._last_base_position = self.spot.GetBasePosition()
-        self._last_base_orientation = self.spot.GetBaseOrientation()
+        self._last_base_position = self.a1.GetBasePosition()
+        self._last_base_orientation = self.a1.GetBaseOrientation()
         # print("ACTION:")
         # print(action)
         if self._is_render:
@@ -174,7 +174,7 @@ class spotBezierEnv(spotGymEnv):
             time_to_sleep = self.control_time_step - time_spent
             if time_to_sleep > 0:
                 time.sleep(time_to_sleep)
-            base_pos = self.spot.GetBasePosition()
+            base_pos = self.a1.GetBasePosition()
             # Keep the previous orientation of the camera set by the user.
             [yaw, pitch,
              dist] = self._pybullet_client.getDebugVisualizerCamera()[8:11]
@@ -182,7 +182,7 @@ class spotBezierEnv(spotGymEnv):
                 dist, yaw, pitch, base_pos)
 
         action = self._transform_action_to_motor_command(action)
-        self.spot.Step(action)
+        self.a1.Step(action)
         # NOTE: SMACH is passed to the reward method
         reward = self._reward()
         done = self._termination()
@@ -204,20 +204,20 @@ class spotBezierEnv(spotGymEnv):
         # get observation
         obs = self._get_observation()
 
-        orn = self.spot.GetBaseOrientation()
+        orn = self.a1.GetBaseOrientation()
 
         # Return StepVelocity with the sign of StepLength
-        DesiredVelicty = math.copysign(self.spot.StepVelocity / 4.0,
-                                       self.spot.StepLength)
+        DesiredVelicty = math.copysign(self.a1.StepVelocity / 4.0,
+                                       self.a1.StepLength)
 
-        fwd_speed = self.spot.prev_lin_twist[0]  # vx
-        lat_speed = self.spot.prev_lin_twist[1]  # vy
+        fwd_speed = self.a1.prev_lin_twist[0]  # vx
+        lat_speed = self.a1.prev_lin_twist[1]  # vy
 
         # DEBUG
-        lt, at = self.spot.GetBaseTwist()
+        lt, at = self.a1.GetBaseTwist()
 
         # ONLY WORKS FOR MOVING PURELY FORWARD
-        pos = self.spot.GetBasePosition()
+        pos = self.a1.GetBasePosition()
 
         forward_reward = pos[0] - self.prev_pos[0]
 
@@ -254,8 +254,8 @@ class spotBezierEnv(spotGymEnv):
 
         drift_reward = -abs(pos[1])
         energy_reward = -np.abs(
-            np.dot(self.spot.GetMotorTorques(),
-                   self.spot.GetMotorVelocities())) * self._time_step
+            np.dot(self.a1.GetMotorTorques(),
+                   self.a1.GetMotorVelocities())) * self._time_step
         reward = (self._distance_weight * forward_reward +
                   self._rotation_weight * rot_reward +
                   self._energy_weight * energy_reward +
